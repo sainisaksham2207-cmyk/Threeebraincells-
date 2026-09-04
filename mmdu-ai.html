@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="An unofficial, student-made look at Maharishi Markandeshwar (Deemed to be University), Mullana, and the field of artificial intelligence its engineering students are trained in." />
+  <title>MM(DU), Mullana — Campus & Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0d16;
+      --maroon: #9c3352;
+      --gold: #cda233;
+      --teal: #2dd4bf;
+      --text: #ece9e1;
+      --muted: #8891a3;
+      --card-bg: rgba(13, 17, 28, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+      overflow-x: hidden;
+      min-height: 520vh;
+    }
+
+    #webgl-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.75rem 2rem;
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.9rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #fff;
+      font-family: 'Fraunces', serif;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-dots { display: flex; gap: 4px; }
+    .brand-dots span {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .brand-dots span:nth-child(1) { background: var(--maroon); color: var(--maroon); }
+    .brand-dots span:nth-child(2) { background: var(--gold); color: var(--gold); }
+    .brand-dots span:nth-child(3) { background: var(--teal); color: var(--teal); }
+
+    #section-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .hud-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 0.9rem;
+    }
+
+    .progress-bar-container {
+      width: 130px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--teal);
+      box-shadow: 0 0 8px var(--teal);
+      transition: width 0.1s ease-out;
+    }
+
+    .hud-footer a {
+      pointer-events: auto;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-family: 'IBM Plex Mono', monospace;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .hud-footer a:hover { color: var(--teal); border-color: var(--teal); }
+
+    .crosshair {
+      position: fixed;
+      width: 12px; height: 12px;
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.18);
+      pointer-events: none;
+      z-index: 9;
+    }
+    .top-left { top: 1rem; left: 1rem; border-width: 1px 0 0 1px; }
+    .top-right { top: 1rem; right: 1rem; border-width: 1px 1px 0 0; }
+    .bottom-left { bottom: 1rem; left: 1rem; border-width: 0 0 1px 1px; }
+    .bottom-right { bottom: 1rem; right: 1rem; border-width: 0 1px 1px 0; }
+
+    .scroller { position: relative; z-index: 5; }
+
+    .scene-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 9vw;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      backdrop-filter: blur(16px);
+      padding: 2.5rem;
+      max-width: 560px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card.active { transform: translateY(0); opacity: 1; }
+    .align-right { margin-left: auto; }
+
+    .scene-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      margin-bottom: 0.75rem;
+      display: inline-block;
+    }
+    .scene-1 .scene-tag { color: var(--gold); }
+    .scene-2 .scene-tag { color: var(--maroon); }
+    .scene-3 .scene-tag { color: var(--teal); }
+    .scene-4 .scene-tag { color: var(--gold); }
+    .scene-5 .scene-tag { color: var(--teal); }
+
+    .scene-title {
+      font-family: 'Fraunces', serif;
+      font-size: 2.35rem;
+      line-height: 1.15;
+      font-weight: 600;
+      margin-bottom: 1.1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .motto {
+      font-family: 'Fraunces', serif;
+      font-style: italic;
+      font-size: 1.15rem;
+      color: var(--gold);
+      margin-bottom: 1.1rem;
+    }
+
+    .scene-desc {
+      color: #b7bdca;
+      font-size: 1rem;
+      line-height: 1.65;
+      margin-bottom: 1.5rem;
+      max-width: 46ch;
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1.15rem;
+    }
+    .spec-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 0.3rem;
+    }
+    .spec-item b {
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    footer.page-footer {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      padding: 3rem 1.5rem 4rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    footer.page-footer a { color: var(--teal); }
+
+    @media (max-width: 768px) {
+      .hud { padding: 1rem 1.1rem; }
+      .card { padding: 1.5rem; }
+      .scene-title { font-size: 1.7rem; }
+      .scene-section { padding: 0 5vw; }
+      #section-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="webgl-canvas"></canvas>
+
+  <div class="crosshair top-left"></div>
+  <div class="crosshair top-right"></div>
+  <div class="crosshair bottom-left"></div>
+  <div class="crosshair bottom-right"></div>
+
+  <div class="hud">
+    <div class="hud-header">
+      <div class="brand">
+        <div class="brand-dots"><span></span><span></span><span></span></div>
+        MM(DU)
+      </div>
+      <div id="section-label">Home</div>
+    </div>
+    <div class="hud-footer">
+      <div class="progress-bar-container"><div class="progress-bar" id="progress"></div></div>
+      <a href="https://www.mmumullana.org" target="_blank" rel="noopener">mmumullana.org</a>
+    </div>
+  </div>
+
+  <main class="scroller">
+
+    <section class="scene-section">
+      <div class="card active scene-1">
+        <div class="scene-tag">Mullana, Ambala, Haryana</div>
+        <h1 class="scene-title">MM(DU), Mullana</h1>
+        <div class="motto">"Think Success Think MM(DU)."</div>
+        <p class="scene-desc">
+          A private deemed-to-be university in Haryana, built up from a single engineering college in the 1990s into a multi-faculty campus. This page is one student's look at where the campus has been — and the field its newest engineers are training in: artificial intelligence.
+        </p>
+        <div class="spec-grid">
+          <div class="spec-item"><span>Founded</span><b>1993</b></div>
+          <div class="spec-item"><span>Location</span><b>Mullana, Ambala</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene-section">
+      <div class="card align-right scene-2">
+        <div class="scene-tag">History &amp; standing</div>
+        <h2 class="scene-title">From an engineering college to a deemed university</h2>
+        <p class="scene-desc">
+          MM(DU) began in 1995 as an engineering college affiliated with Kurukshetra University. In June 2007, the Ministry of Human Resource Development granted it deemed-to-be-university status under the UGC Act. It has since grown into a multi-campus institution offering close to 150 undergraduate, postgraduate and doctoral programmes across engineering, medicine, dentistry, pharmacy, nursing, law, management, agriculture and biotechnology.
+        </p>
+        <div class="spec-grid">
+          <div class="spec-item"><span>Deemed university since</span><b>2007</b></div>
+          <div class="spec-item"><span>Programmes offered</span><b>~150</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene-section">
+      <div class="card scene-3">
+        <div class="scene-tag">The field</div>
+        <h2 class="scene-title">Learning to build systems that learn</h2>
+        <p class="scene-desc">
+          Artificial intelligence is the study of building systems that do things — recognising images, parsing language, predicting outcomes — that used to require a person's judgement. Machine learning, the part most computer-science students spend their degree on, is about getting those systems to improve from data rather than from hand-written rules. A typical B.Tech in CSE with an AI &amp; ML specialisation moves from linear algebra and probability in year one toward neural networks, natural language processing and computer vision by the last.
+        </p>
+        <div class="spec-grid">
+          <div class="spec-item"><span>Starts with</span><b>Linear algebra, probability</b></div>
+          <div class="spec-item"><span>Builds toward</span><b>Neural nets, NLP, vision</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene-section">
+      <div class="card align-right scene-4">
+        <div class="scene-tag">Recognition</div>
+        <h2 class="scene-title">Rated among India's top institutions</h2>
+        <p class="scene-desc">
+          NAAC, India's national accreditation body, has rated MM(DU) at its highest grade, A++ — placing it among the top 3% of institutions it has assessed. In NIRF's 2023 rankings, released by India's Ministry of Education, MM(DU) placed 78th among all universities in the country, with its pharmacy and medical institutes ranked separately among the top colleges in their own fields.
+        </p>
+        <div class="spec-grid">
+          <div class="spec-item"><span>NAAC grade</span><b>A++</b></div>
+          <div class="spec-item"><span>NIRF 2023</span><b>78th nationally</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene-section">
+      <div class="card scene-5">
+        <div class="scene-tag">What's next</div>
+        <h2 class="scene-title">Heritage, recognition and intelligence, side by side</h2>
+        <p class="scene-desc">
+          Three decades of engineering and medical education meeting a curriculum being rewritten by AI — that's roughly the shape of the next four years for a lot of students walking onto this campus. This page was built by one of them, as a small experiment in pairing a WebGL scroll with the actual facts of the place.
+        </p>
+        <div class="spec-grid">
+          <div class="spec-item"><span>Heritage</span><b>Campus, since 1993</b></div>
+          <div class="spec-item"><span>Intelligence</span><b>AI &amp; ML, ongoing</b></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="page-footer">
+    Unofficial, student-made page — not affiliated with or endorsed by Maharishi Markandeshwar (Deemed to be University).<br>
+    Official site: <a href="https://www.mmumullana.org" target="_blank" rel="noopener">mmumullana.org</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const canvas = document.getElementById('webgl-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 48;
+
+    const PARTICLE_COUNT = 3600;
+    const geometry = new THREE.BufferGeometry();
+    const currentPositions = new Float32Array(PARTICLE_COUNT * 3);
+    const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
+    const colors = new Float32Array(PARTICLE_COUNT * 3);
+
+    const cMaroon = new THREE.Color(0x9c3352);
+    const cGold = new THREE.Color(0xcda233);
+    const cTeal = new THREE.Color(0x2dd4bf);
+
+    // --- Topologies, each grounded in the section it represents ---
+    const topologies = {
+      // The campus gate: two pillars, an arch, and scattered courtyard ground
+      gatewayArch: (i) => {
+        const group = i % 4;
+        if (group === 0 || group === 1) {
+          const side = group === 0 ? -16 : 16;
+          return [
+            side + (Math.random() - 0.5) * 2.4,
+            -14 + Math.random() * 24,
+            (Math.random() - 0.5) * 3
+          ];
+        } else if (group === 2) {
+          const angle = Math.random() * Math.PI;
+          const r = 16 + (Math.random() - 0.5) * 2;
+          return [
+            Math.cos(angle) * r,
+            10 + Math.sin(angle) * r * 0.6,
+            (Math.random() - 0.5) * 3
+          ];
+        } else {
+          return [
+            (Math.random() - 0.5) * 42,
+            -15 + Math.random() * 2,
+            (Math.random() - 0.5) * 10 - 2
+          ];
+        }
+      },
+      // A small layered neural network: five columns of nodes
+      neuralNet: (i) => {
+        const xPositions = [-20, -10, 0, 10, 20];
+        const spreadByLayer = [22, 15, 11, 15, 22];
+        const layer = i % 5;
+        return [
+          xPositions[layer] + (Math.random() - 0.5) * 1.4,
+          (Math.random() - 0.5) * spreadByLayer[layer],
+          (Math.random() - 0.5) * 4
+        ];
+      },
+      // A medallion / seal: outer ring, inner ring, filled centre
+      medallion: (i) => {
+        const roll = Math.random();
+        let radius;
+        if (roll < 0.5) radius = 15 + (Math.random() - 0.5) * 1.2;
+        else if (roll < 0.8) radius = 10 + (Math.random() - 0.5) * 1.2;
+        else radius = Math.random() * 6;
+        const angle = Math.random() * Math.PI * 2;
+        return [Math.cos(angle) * radius, Math.sin(angle) * radius, (Math.random() - 0.5) * 2];
+      },
+      // Three threads converging into one shell
+      convergedNexus: (i) => {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+        const r = 13 + Math.sin(theta * 6) * 1.5;
+        return [
+          r * Math.sin(phi) * Math.cos(theta),
+          r * Math.sin(phi) * Math.sin(theta),
+          r * Math.cos(phi)
+        ];
+      }
+    };
+
+    const colorGateway = (i) => (i % 4 < 2 ? cMaroon : (i % 4 === 2 ? cGold : cTeal));
+    const colorNeural = () => cTeal;
+    const colorMedallion = (i) => (i % 10 < 3 ? cTeal : cGold);
+    const colorConverged = (i) => (i % 3 === 0 ? cMaroon : (i % 3 === 1 ? cGold : cTeal));
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const [x, y, z] = topologies.gatewayArch(i);
+      currentPositions[i * 3] = x;
+      currentPositions[i * 3 + 1] = y;
+      currentPositions[i * 3 + 2] = z;
+      targetPositions[i * 3] = x;
+      targetPositions[i * 3 + 1] = y;
+      targetPositions[i * 3 + 2] = z;
+      const c = colorGateway(i);
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.8,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending
+    });
+    const particleSystem = new THREE.Points(geometry, particleMaterial);
+    scene.add(particleSystem);
+
+    // Three converging pillars, shown only in the closing scene:
+    // Heritage (maroon), Recognition (gold), Intelligence (teal)
+    const pillarPositions = [
+      [13, 0, 0],
+      [-6.5, 0, -11.26],
+      [-6.5, 0, 11.26]
+    ];
+    const pillarColors = [0x9c3352, 0xcda233, 0x2dd4bf];
+    const polyhedra = pillarPositions.map((pos, k) => {
+      const geo = new THREE.IcosahedronGeometry(2.3, 1);
+      const mat = new THREE.MeshBasicMaterial({ color: pillarColors[k], wireframe: true, transparent: true, opacity: 0.35 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(...pos);
+      mesh.visible = false;
+      scene.add(mesh);
+      return mesh;
+    });
+
+    // --- Generic line system reused across scenes ---
+    const MAX_LINES = 20;
+    const linePositions = new Float32Array(MAX_LINES * 2 * 3);
+    const lineGeom = new THREE.BufferGeometry();
+    lineGeom.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+    lineGeom.setDrawRange(0, 0);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
+    const synapseLines = new THREE.LineSegments(lineGeom, lineMaterial);
+    scene.add(synapseLines);
+
+    function setLines(pairs, colorHex) {
+      const n = Math.min(pairs.length, MAX_LINES);
+      for (let i = 0; i < n; i++) {
+        const [p1, p2] = pairs[i];
+        linePositions[i * 6] = p1[0]; linePositions[i * 6 + 1] = p1[1]; linePositions[i * 6 + 2] = p1[2];
+        linePositions[i * 6 + 3] = p2[0]; linePositions[i * 6 + 4] = p2[1]; linePositions[i * 6 + 5] = p2[2];
+      }
+      lineGeom.attributes.position.needsUpdate = true;
+      lineGeom.setDrawRange(0, n * 2);
+      lineMaterial.color.set(colorHex);
+    }
+
+    const gatewayPairs = [
+      [[-16, 10, 0], [0, 19.6, 0]],
+      [[0, 19.6, 0], [16, 10, 0]],
+      [[-16, 10, 0], [-16, -14, 0]],
+      [[16, 10, 0], [16, -14, 0]]
+    ];
+
+    const neuralLayers = [-20, -10, 0, 10, 20].map(x => [[x, -6, 0], [x, 6, 0]]);
+    const neuralPairs = [];
+    for (let k = 0; k < 4; k++) {
+      for (const a of neuralLayers[k]) for (const b of neuralLayers[k + 1]) neuralPairs.push([a, b]);
+    }
+
+    const medallionPairs = [
+      [[0, 0, 0], [15, 0, 0]],
+      [[0, 0, 0], [0, 15, 0]],
+      [[0, 0, 0], [-15, 0, 0]],
+      [[0, 0, 0], [0, -15, 0]]
+    ];
+
+    const convergedPairs = [
+      [pillarPositions[0], pillarPositions[1]],
+      [pillarPositions[1], pillarPositions[2]],
+      [pillarPositions[2], pillarPositions[0]]
+    ];
+
+    function setTargetTopology(topologyFn, colorFn) {
+      const colAttr = geometry.attributes.color;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const [x, y, z] = topologyFn(i);
+        targetPositions[i * 3] = x;
+        targetPositions[i * 3 + 1] = y;
+        targetPositions[i * 3 + 2] = z;
+        const c = colorFn(i);
+        colAttr.array[i * 3] += (c.r - colAttr.array[i * 3]) * 0.1;
+        colAttr.array[i * 3 + 1] += (c.g - colAttr.array[i * 3 + 1]) * 0.1;
+        colAttr.array[i * 3 + 2] += (c.b - colAttr.array[i * 3 + 2]) * 0.1;
+      }
+      colAttr.needsUpdate = true;
+    }
+
+    const cards = document.querySelectorAll('.card');
+    const progressBar = document.getElementById('progress');
+    const sectionLabel = document.getElementById('section-label');
+    const sectionNames = ['Home', 'About the university', 'AI & machine learning', 'Recognition', "What's next"];
+
+    let scrollProgress = 0;
+    let targetScrollProgress = 0;
+
+    window.addEventListener('scroll', () => {
+      const maxScroll = document.body.scrollHeight - window.innerHeight;
+      targetScrollProgress = Math.max(0, Math.min(1, window.scrollY / maxScroll));
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+    }, { threshold: 0.4 });
+    cards.forEach(card => observer.observe(card));
+
+    let mouseX = 0, mouseY = 0;
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      scrollProgress += (targetScrollProgress - scrollProgress) * 0.08;
+      progressBar.style.width = `${(scrollProgress * 100).toFixed(1)}%`;
+      sectionLabel.innerText = sectionNames[Math.min(4, Math.floor(scrollProgress * 5))];
+
+      if (scrollProgress < 0.4) {
+        setTargetTopology(topologies.gatewayArch, colorGateway);
+        polyhedra.forEach(p => p.visible = false);
+        setLines(gatewayPairs, '#cda233');
+      } else if (scrollProgress < 0.6) {
+        setTargetTopology(topologies.neuralNet, colorNeural);
+        polyhedra.forEach(p => p.visible = false);
+        setLines(neuralPairs, '#2dd4bf');
+      } else if (scrollProgress < 0.8) {
+        setTargetTopology(topologies.medallion, colorMedallion);
+        polyhedra.forEach(p => p.visible = false);
+        setLines(medallionPairs, '#cda233');
+      } else {
+        setTargetTopology(topologies.convergedNexus, colorConverged);
+        polyhedra.forEach(p => p.visible = true);
+        setLines(convergedPairs, '#e8e6de');
+      }
+
+      const posAttr = geometry.attributes.position;
+      for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+        currentPositions[i] += (targetPositions[i] - currentPositions[i]) * 0.055;
+      }
+      posAttr.needsUpdate = true;
+
+      particleSystem.rotation.y = elapsed * 0.05 + scrollProgress * Math.PI * 1.4;
+      particleSystem.rotation.x = mouseY * 0.2;
+      particleSystem.rotation.z = mouseX * 0.2;
+
+      polyhedra.forEach((p, k) => {
+        p.rotation.x += 0.01 * (k + 1);
+        p.rotation.y += 0.014 * (k + 1);
+      });
+
+      camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
+      camera.position.y += (-mouseY * 5 - camera.position.y) * 0.05;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
